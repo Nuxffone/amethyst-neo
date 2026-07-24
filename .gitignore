@@ -6,7 +6,10 @@
 /JavaApp/local_out
 /Natives/AngelAuraAmethyst
 /Natives/build
-/Natives/external/UnzipKit
+/Natives/external/UnzipKit/*
+!/Natives/external/UnzipKit/UZKArchive.h
+!/Natives/external/UnzipKit/UZKFileInfo.h
+!/Natives/external/UnzipKit/UnzipKit.h
 .DS_Store
 xcshareddata/
 xcuserdata/

@@ -61,44 +61,29 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-version
           echo "SDKPATH=$SDKPATH"
 
-      # Trigger gmake compilation pipelines with inline stderr filtering and execute post-build binary optimization
-      - name: Build sideload IPA & TrollStore tIPA
+      - name: Set up build environment
         shell: bash
         run: |
-          echo '#import <mach/mach.h>' | cat - Natives/JavaLauncher.m > temp && mv temp Natives/JavaLauncher.m
-
           JDK_BASE_PATH="${{ steps.setup-java.outputs.path }}"
-          export PATH="$JDK_BASE_PATH/bin:/opt/homebrew/bin:$PATH"
-          export JAVA_HOME="$JDK_BASE_PATH"
-          export BOOTJDK="$JDK_BASE_PATH/bin"
-          export SLIMMED=1
-          
-          export CODE_SIGNING_ALLOWED=NO
-          export CODE_SIGNING_REQUIRED=NO
-          export CODE_SIGN_IDENTITY=""
+          echo "JDK_BASE_PATH=$JDK_BASE_PATH" >> $GITHUB_ENV
+          echo "BOOTJDK=$JDK_BASE_PATH/bin" >> $GITHUB_ENV
+          echo "JAVA_HOME=$JDK_BASE_PATH" >> $GITHUB_ENV
+          echo "SLIMMED=1" >> $GITHUB_ENV
+          echo "CODE_SIGNING_ALLOWED=NO" >> $GITHUB_ENV
+          echo "CODE_SIGNING_REQUIRED=NO" >> $GITHUB_ENV
+          echo "CODE_SIGN_IDENTITY=" >> $GITHUB_ENV
 
+      - name: Build (sideload IPA only)
+        shell: bash
+        run: |
+          export PATH="$JDK_BASE_PATH/bin:/opt/homebrew/bin:$PATH"
           export CFLAGS="-Wno-error=implicit-function-declaration $CFLAGS"
           export CXXFLAGS="-Wno-error=implicit-function-declaration $CXXFLAGS"
-
-          SIGN_FLAGS="CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="
-
-          # WARNING MITIGATION: Filter runtime stderr streams to suppress repetitive upstream vtool signature warnings
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 $SIGN_FLAGS 2> >(grep -v "vtool warning: code signature will be invalid" >&2)
-          
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 TROLLSTORE_JIT_ENT=1 $SIGN_FLAGS 2> >(grep -v "vtool warning: code signature will be invalid" >&2)
+          gmake package PLATFORM=2
 
       - name: List artifacts
         if: always()
         run: ls -la artifacts/ || true
-
-      - name: Upload TrollStore tIPA
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: org.angelauramc.amethyst-ios-trollstore.tipa
-          path: artifacts/*-trollstore.tipa
-          retention-days: 30
-          if-no-files-found: warn
 
       - name: Upload regular IPA
         if: always()
