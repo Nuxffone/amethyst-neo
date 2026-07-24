@@ -31,6 +31,7 @@ int memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, void *bu
 
 static int currentHotbarSlot = -1;
 static GameSurfaceView* pojavWindow;
+static CGPoint hardwareMousePos;
 
 @interface SurfaceViewController ()<UITextFieldDelegate, UIGestureRecognizerDelegate> {
 }
@@ -178,6 +179,7 @@ static GameSurfaceView* pojavWindow;
     // Virtual mouse
     virtualMouseEnabled = getPrefBool(@"control.virtmouse_enable");
     virtualMouseFrame = CGRectMake(self.view.frame.size.width / 2, self.view.frame.size.height / 2, 18, 27);
+    hardwareMousePos = CGPointMake(self.view.frame.size.width / 2, self.view.frame.size.height / 2);
     self.mousePointerView = [[UIImageView alloc] initWithFrame:virtualMouseFrame];
     self.mousePointerView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleRightMargin |UIViewAutoresizingFlexibleBottomMargin;
     self.mousePointerView.hidden = !virtualMouseEnabled;
@@ -431,6 +433,9 @@ static GameSurfaceView* pojavWindow;
         if (minVersion == 0) {
             minVersion = [self.metadata[@"javaVersion"][@"version"] intValue];
         }
+        if (minVersion == 0) {
+            minVersion = 21;
+        }
         launchJVM(
             BaseAuthenticator.current.authData[@"username"],
             self.metadata,
@@ -537,6 +542,12 @@ static GameSurfaceView* pojavWindow;
             lastVirtualMousePoint = location;
             self.mousePointerView.frame = virtualMouseFrame;
             CallbackBridge_nativeSendCursorPos(event, virtualMouseFrame.origin.x * screenScale, virtualMouseFrame.origin.y * screenScale);
+            return;
+        }
+        if (event == ACTION_MOVE_MOTION) {
+            hardwareMousePos.x = clamp(hardwareMousePos.x + location.x, 0, self.surfaceView.frame.size.width);
+            hardwareMousePos.y = clamp(hardwareMousePos.y + location.y, 0, self.surfaceView.frame.size.height);
+            CallbackBridge_nativeSendCursorPos(ACTION_MOVE, hardwareMousePos.x * screenScale, hardwareMousePos.y * screenScale);
             return;
         }
         lastVirtualMousePoint = location;
